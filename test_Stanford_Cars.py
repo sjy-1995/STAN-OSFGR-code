@@ -207,61 +207,9 @@ def get_optimizer(args, params_list):
 
 # ###################################### self-defined model ######################################
 
-class mytry5_20220519_v3_backbone(nn.Module):  # for swin-B
+class STAN_OSFGR(nn.Module):  # for swin-B
     def __init__(self, transformer, num_classes=1000):
-        super(mytry5_20220519_v3_backbone, self).__init__()
-        self.swinB = transformer
-        self.avgpool1 = nn.AdaptiveAvgPool2d((1, 1))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
-        self.avgpool14 = nn.AdaptiveAvgPool2d((14, 14))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
-        self.maxpool1 = nn.AdaptiveMaxPool2d((1, 1))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
-        self.maxpool14 = nn.AdaptiveMaxPool2d((14, 14))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
-        self.sigmoid = nn.Sigmoid()
-        self.relu = nn.ReLU()
-
-        self.Upsample2 = nn.Upsample(scale_factor=2, mode='bilinear')
-
-        self.fc0 = nn.Linear(1024, num_classes)
-        self.num_classes = num_classes
-
-    def forward(self, x, need_feature=False):
-        x = self.swinB.patch_embed(x)
-        x = self.swinB.pos_drop(x)
-
-        layer_num = 0
-        for layer in self.swinB.layers:
-            x = layer(x)
-            if layer_num == 0:
-                x1 = x
-                x1 = x1.permute(0, 2, 1)
-                x1 = x1.view(x1.shape[0], x1.shape[1], int(math.sqrt(x1.shape[2])), int(math.sqrt(x1.shape[2])))
-            elif layer_num == 1:
-                x2 = x
-                x2 = x2.permute(0, 2, 1)
-                x2 = x2.view(x2.shape[0], x2.shape[1], int(math.sqrt(x2.shape[2])), int(math.sqrt(x2.shape[2])))
-            elif layer_num == 2:
-                x3 = x
-                x3 = x3.permute(0, 2, 1)
-                x3 = x3.view(x3.shape[0], x3.shape[1], int(math.sqrt(x3.shape[2])), int(math.sqrt(x3.shape[2])))
-            elif layer_num == 3:
-                x4 = x
-                x4 = x4.permute(0, 2, 1)
-                x4 = x4.view(x4.shape[0], x4.shape[1], int(math.sqrt(x4.shape[2])), int(math.sqrt(x4.shape[2])))
-
-            layer_num = layer_num + 1
-
-        x = self.swinB.norm(x)  # B L C
-        x = self.swinB.avgpool(x.transpose(1, 2))  # B C 1
-        x = torch.flatten(x, 1)
-
-        logits0 = self.fc0(x)
-        logits0_ori = logits0
-
-        return logits0_ori, logits0_ori
-
-
-class mytry5_20220531_v9_4(nn.Module):  # for swin-B
-    def __init__(self, transformer, num_classes=1000):
-        super(mytry5_20220531_v9_4, self).__init__()
+        super(STAN_OSFGR, self).__init__()
         self.swinB = transformer
         self.avgpool1 = nn.AdaptiveAvgPool2d((1, 1))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
         self.avgpool14 = nn.AdaptiveAvgPool2d((14, 14))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
@@ -641,8 +589,9 @@ F = SwinTransformer(img_size=224, patch_size=4, in_chans=3, num_classes=1000,
                     # use_checkpoint=True
                     )  # the feature dim is 1024
 
-net = mytry5_20220519_v3_backbone(F, num_classes=98)
+# net = mytry5_20220519_v3_backbone(F, num_classes=98)
 # net = mytry5_20220531_v9_4(F, num_classes=98)
+net = STAN_OSFGR(F, num_classes=98)
 
 # net_dict = net.state_dict()
 # pretrained_dict = torch.load('swin_base_patch4_window7_224_22k.pth')['model']
@@ -660,18 +609,8 @@ net = mytry5_20220519_v3_backbone(F, num_classes=98)
 # net_dict.update(pretrained_dict)
 # net.load_state_dict(net_dict)
 
-# # pretrained_dict = torch.load('../osr_closed_set_all_you_need-main_new/open_set_recognition/log/(13.05.2022_|_41.687)/arpl_models/cub/checkpoints/cub_180net1_Softmax.pth')   # for cub
-# # pretrained_dict = torch.load('./open_set_recognition/log/(01.06.2022_|_17.260)/arpl_models/CIFAR10/checkpoints/CIFAR10_1net1_Softmax.pth')   # for CIFAR10 trial 0
-# # pretrained_dict = torch.load('./open_set_recognition/log/(01.06.2022_|_46.004)/arpl_models/TinyImageNet/checkpoints/TinyImageNet_3net1_Softmax.pth')   # for TinyImageNet trial 0
-# # pretrained_dict = torch.load('./open_set_recognition/log/(01.06.2022_|_12.727)/arpl_models/SVHN/checkpoints/SVHN_3net1_Softmax.pth')   # for SVHN trial 0
-# # pretrained_dict = torch.load('./open_set_recognition/log/(01.06.2022_|_32.859)/arpl_models/CIFAR+10/checkpoints/CIFAR+10_1net1_Softmax.pth')   # for CIFAR+10 trial 0
-# net_dict = net.state_dict()
-# pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in net_dict}
-# net_dict.update(pretrained_dict)
-# net.load_state_dict(net_dict)
+net.load_state_dict(torch.load('Stanford-Cars_STAN-OSFGR.pth'))   # backbone
 
-net.load_state_dict(torch.load('./open_set_recognition/log/(01.06.2022_|_32.557)/arpl_models/stanford_cars/checkpoints/stanford_cars_30net1_Softmax.pth'))   # backbone
-# net.load_state_dict(torch.load('./open_set_recognition/log/(14.06.2022_|_40.145)/arpl_models/stanford_cars/checkpoints/stanford_cars_33net1_Softmax.pth'))  # try31_v9_4
 
 # -----------------------------
 # PREPARE EXPERIMENT
