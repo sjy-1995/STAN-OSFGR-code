@@ -213,166 +213,9 @@ def get_optimizer(args, params_list):
 
 # ###################################### self-defined model ######################################
 
-class mytry5_20220519_v3(nn.Module):  # for swin-B
+class STAN_OSFGR(nn.Module):  # for swin-B
     def __init__(self, transformer, num_classes=1000):
-        super(mytry5_20220519_v3, self).__init__()
-        self.swinB = transformer
-        self.avgpool1 = nn.AdaptiveAvgPool2d((1, 1))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
-        self.avgpool14 = nn.AdaptiveAvgPool2d((14, 14))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
-        self.maxpool1 = nn.AdaptiveMaxPool2d((1, 1))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
-        self.maxpool14 = nn.AdaptiveMaxPool2d((14, 14))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
-        self.sigmoid = nn.Sigmoid()
-        self.relu = nn.ReLU()
-
-        self.Upsample2 = nn.Upsample(scale_factor=2, mode='bilinear')
-
-        self.conv1_1 = nn.Conv2d(in_channels=256, out_channels=512, kernel_size=4, stride=2, padding=1, bias=False)   # (56, 56)->(28, 28)
-        self.bn1_1 = nn.BatchNorm2d(512)
-        self.conv1_2 = nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=4, stride=2, padding=1, bias=False)  # (28, 28)->(14, 14)
-        self.bn1_2 = nn.BatchNorm2d(1024)
-        self.conv1_3 = nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn1_3 = nn.BatchNorm2d(1024)
-
-        self.conv2_1 = nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=4, stride=2, padding=1, bias=False)   # (28, 28)->(14, 14)
-        self.bn2_1 = nn.BatchNorm2d(1024)
-        self.conv2_2 = nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn2_2 = nn.BatchNorm2d(1024)
-
-        self.conv3_1 = nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn3_1 = nn.BatchNorm2d(1024)
-
-        self.conv4_1 = nn.Conv2d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=1, bias=False)
-        self.bn4_1 = nn.BatchNorm2d(1024)
-
-        self.Q1 = nn.Linear(1024, 1024)
-        self.K1 = nn.Linear(1024, 1024)
-        self.V1 = nn.Linear(1024, 1024)
-        self.Q2 = nn.Linear(1024, 1024)
-        self.K2 = nn.Linear(1024, 1024)
-        self.V2 = nn.Linear(1024, 1024)
-        self.Q3 = nn.Linear(1024, 1024)
-        self.K3 = nn.Linear(1024, 1024)
-        self.V3 = nn.Linear(1024, 1024)
-        self.Q12 = nn.Linear(1024, 1024)
-        self.K12 = nn.Linear(1024, 1024)
-        self.V12 = nn.Linear(1024, 1024)
-        self.Q123 = nn.Linear(1024, 1024)
-        self.K123 = nn.Linear(1024, 1024)
-        self.V123 = nn.Linear(1024, 1024)
-        self.Q4 = nn.Linear(1024, 1024)
-        self.K4 = nn.Linear(1024, 1024)
-        self.V4 = nn.Linear(1024, 1024)
-
-        self.fc0 = nn.Linear(1024, num_classes)
-        self.num_classes = num_classes
-
-        self.MLP1 = nn.Sequential(
-            nn.Linear(1024, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, 1024)
-        )
-        self.MLP2 = nn.Sequential(
-            nn.Linear(1024, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, 1024)
-        )
-
-        # ########## for the myLSTMcell ######################
-        self.LSTM_fc = nn.Linear(2048, 1024)
-        self.tanh = nn.Tanh()
-        # ####################################################
-        self.LSTM_output_fc = nn.Linear(1024, num_classes)
-
-    def forward(self, x, need_feature=False):
-        x = self.swinB.patch_embed(x)
-        x = self.swinB.pos_drop(x)
-
-        layer_num = 0
-        for layer in self.swinB.layers:
-            x = layer(x)
-            if layer_num == 0:
-                x1 = x
-                x1 = x1.permute(0, 2, 1)
-                x1 = x1.view(x1.shape[0], x1.shape[1], int(math.sqrt(x1.shape[2])), int(math.sqrt(x1.shape[2])))
-            elif layer_num == 1:
-                x2 = x
-                x2 = x2.permute(0, 2, 1)
-                x2 = x2.view(x2.shape[0], x2.shape[1], int(math.sqrt(x2.shape[2])), int(math.sqrt(x2.shape[2])))
-            elif layer_num == 2:
-                x3 = x
-                x3 = x3.permute(0, 2, 1)
-                x3 = x3.view(x3.shape[0], x3.shape[1], int(math.sqrt(x3.shape[2])), int(math.sqrt(x3.shape[2])))
-            elif layer_num == 3:
-                x4 = x
-                x4 = x4.permute(0, 2, 1)
-                x4 = x4.view(x4.shape[0], x4.shape[1], int(math.sqrt(x4.shape[2])), int(math.sqrt(x4.shape[2])))
-
-            layer_num = layer_num + 1
-
-        x = self.swinB.norm(x)  # B L C
-        x = self.swinB.avgpool(x.transpose(1, 2))  # B C 1
-        x = torch.flatten(x, 1)
-
-        logits0 = self.fc0(x)
-        logits0_ori = logits0
-
-        F1 = x4
-        F2 = x3
-
-        F3 = x2
-        F4 = x1
-
-        F1 = self.relu(self.bn4_1(self.conv4_1(F1)))
-        F2 = self.relu(self.bn3_1(self.conv3_1(F2)))
-        F3 = self.relu(self.bn2_2(self.conv2_2(self.relu(self.bn2_1(self.conv2_1(F3))))))
-        F4 = self.relu(self.bn1_3(self.conv1_3(self.relu(self.bn1_2(self.conv1_2(self.relu(self.bn1_1(self.conv1_1(F4)))))))))
-
-        F1 = self.maxpool1(F1).view(x.shape[0], -1)
-        F2 = self.maxpool1(F2).view(x.shape[0], -1)
-        F3 = self.maxpool1(F3).view(x.shape[0], -1)
-        F4 = self.maxpool1(F4).view(x.shape[0], -1)  # (b, 1024)
-
-        F1_ = F1
-        Q_F1_, K_F1_, V_F1_ = self.Q1(F1_), self.K1(F1_), self.V1(F1_)
-        Q_F2, K_F2, V_F2 = self.Q2(F2), self.K2(F2), self.V2(F2)
-        Attned_F1 = torch.mm(torch.softmax(torch.mm(Q_F2, K_F1_.permute(1, 0)) / math.sqrt(1024), 1), V_F1_)
-        Attned_F2 = torch.mm(torch.softmax(torch.mm(Q_F1_, K_F2.permute(1, 0)) / math.sqrt(1024), 1), V_F2)
-        F12 = Attned_F1 + Attned_F2
-        Q_F3, K_F3, V_F3 = self.Q3(F3), self.K3(F3), self.V3(F3)
-        Q_F12, K_F12, V_F12 = self.Q12(F12), self.K12(F12), self.V12(F12)
-        Attned_F3 = torch.mm(torch.softmax(torch.mm(Q_F12, K_F3.permute(1, 0)) / math.sqrt(1024), 1), V_F3)
-        Attned_F12 = torch.mm(torch.softmax(torch.mm(Q_F3, K_F12.permute(1, 0)) / math.sqrt(1024), 1), V_F12)
-        F123 = Attned_F3 + Attned_F12
-        Q_F4, K_F4, V_F4 = self.Q4(F4), self.K4(F4), self.V4(F4)
-        Q_F123, K_F123, V_F123 = self.Q123(F123), self.K123(F123), self.V123(F123)
-        Attned_F4 = torch.mm(torch.softmax(torch.mm(Q_F123, K_F4.permute(1, 0)) / math.sqrt(1024), 1), V_F4)
-        Attned_F123 = torch.mm(torch.softmax(torch.mm(Q_F4, K_F123.permute(1, 0)) / math.sqrt(1024), 1), V_F123)
-        F1234 = Attned_F4 + Attned_F123
-
-        Hidden = self.MLP1(F1)
-        Cell = self.MLP2(F1)
-
-        LSTM_output1, Hidden1, Cell1 = self.myLSTMcell(Hidden, Cell, F1234)
-        LSTM_output2, Hidden2, Cell2 = self.myLSTMcell(Hidden1, Cell1, F123)
-        LSTM_output3, Hidden3, Cell3 = self.myLSTMcell(Hidden2, Cell2, F12)
-        LSTM_output4, Hidden4, Cell4 = self.myLSTMcell(Hidden3, Cell3, F1)
-
-        LSTM_logits = self.LSTM_output_fc(LSTM_output4)
-
-        return logits0_ori, LSTM_logits
-
-    def myLSTMcell(self, Hidden, Cell, input):
-        Cell_ = Cell * self.sigmoid(self.LSTM_fc(torch.cat((Hidden, input), 1)))
-        Cell_ = Cell_ + self.sigmoid(self.LSTM_fc(torch.cat((Hidden, input), 1))) * self.tanh(self.LSTM_fc(torch.cat((Hidden, input), 1)))
-        output = self.tanh(Cell_) * self.sigmoid(self.LSTM_fc(torch.cat((Hidden, input), 1)))
-        Cell = Cell_
-        Hidden = output
-        return output, Hidden, Cell
-
-
-class mytry5_20220531_v9_4(nn.Module):  # for swin-B
-    def __init__(self, transformer, num_classes=1000):
-        super(mytry5_20220531_v9_4, self).__init__()
+        super(STAN_OSFGR, self).__init__()
         self.swinB = transformer
         self.avgpool1 = nn.AdaptiveAvgPool2d((1, 1))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
         self.avgpool14 = nn.AdaptiveAvgPool2d((14, 14))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
@@ -840,35 +683,24 @@ F = SwinTransformer(img_size=224, patch_size=4, in_chans=3, num_classes=1000,
                     )  # the feature dim is 1024
 
 # net = mytry5_20220519_v3(F, num_classes=98)
-net = mytry5_20220531_v9_4(F, num_classes=98)
+net = STAN_OSFGR(F, num_classes=98)
 
-# net_dict = net.state_dict()
-# pretrained_dict = torch.load('swin_base_patch4_window7_224_22k.pth')['model']
-# pretrained_dict = {('swinB.'+k): v for k, v in pretrained_dict.items() if (('swinB.'+k) in net_dict) and ('classifier' not in k) and (k not in ['layers.0.blocks.1.attn_mask',
-#                                                                                                 'layers.1.blocks.1.attn_mask',
-#                                                                                                 'layers.2.blocks.1.attn_mask',
-#                                                                                                 'layers.2.blocks.3.attn_mask',
-#                                                                                                 'layers.2.blocks.5.attn_mask',
-#                                                                                                 'layers.2.blocks.7.attn_mask',
-#                                                                                                 'layers.2.blocks.9.attn_mask',
-#                                                                                                 'layers.2.blocks.11.attn_mask',
-#                                                                                                 'layers.2.blocks.13.attn_mask',
-#                                                                                                 'layers.2.blocks.15.attn_mask',
-#                                                                                                 'layers.2.blocks.17.attn_mask'])}
-# net_dict.update(pretrained_dict)
-# net.load_state_dict(net_dict)
-
-# pretrained_dict = torch.load('../osr_closed_set_all_you_need-main_new/open_set_recognition/log/(13.05.2022_|_41.687)/arpl_models/cub/checkpoints/cub_180net1_Softmax.pth')   # for cub
-# pretrained_dict = torch.load('./open_set_recognition/log/(01.06.2022_|_17.260)/arpl_models/CIFAR10/checkpoints/CIFAR10_1net1_Softmax.pth')   # for CIFAR10 trial 0
-# pretrained_dict = torch.load('./open_set_recognition/log/(01.06.2022_|_46.004)/arpl_models/TinyImageNet/checkpoints/TinyImageNet_3net1_Softmax.pth')   # for TinyImageNet trial 0
-# pretrained_dict = torch.load('./open_set_recognition/log/(01.06.2022_|_12.727)/arpl_models/SVHN/checkpoints/SVHN_3net1_Softmax.pth')   # for SVHN trial 0
-# pretrained_dict = torch.load('./open_set_recognition/log/(01.06.2022_|_32.859)/arpl_models/CIFAR+10/checkpoints/CIFAR+10_1net1_Softmax.pth')   # for CIFAR+10 trial 0
-# pretrained_dict = torch.load('./open_set_recognition/log/(01.06.2022_|_32.557)/arpl_models/stanford_cars/checkpoints/stanford_cars_30net1_Softmax.pth')   # for cars
-pretrained_dict = torch.load('./open_set_recognition/log/(02.06.2022_|_40.290)/arpl_models/stanford_cars/checkpoints/stanford_cars_42net1_Softmax.pth')   # for cars
 net_dict = net.state_dict()
-pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in net_dict}
+pretrained_dict = torch.load('swin_base_patch4_window7_224_22k.pth')['model']
+pretrained_dict = {('swinB.'+k): v for k, v in pretrained_dict.items() if (('swinB.'+k) in net_dict) and ('classifier' not in k) and (k not in ['layers.0.blocks.1.attn_mask',
+                                                                                                'layers.1.blocks.1.attn_mask',
+                                                                                                'layers.2.blocks.1.attn_mask',
+                                                                                                'layers.2.blocks.3.attn_mask',
+                                                                                                'layers.2.blocks.5.attn_mask',
+                                                                                                'layers.2.blocks.7.attn_mask',
+                                                                                                'layers.2.blocks.9.attn_mask',
+                                                                                                'layers.2.blocks.11.attn_mask',
+                                                                                                'layers.2.blocks.13.attn_mask',
+                                                                                                'layers.2.blocks.15.attn_mask',
+                                                                                                'layers.2.blocks.17.attn_mask'])}
 net_dict.update(pretrained_dict)
 net.load_state_dict(net_dict)
+
 
 feat_dim = args.feat_dim
 
@@ -1052,22 +884,8 @@ for epoch in range(options['max_epoch']):
         auroc2 = myauroc(xK_net2, xU_net2)
         print("net2 Acc (%): {:.3f}\t AUROC (%): {:.3f}\t".format(acc2, auroc2))
 
-        print("The best saved checkpoint's epoch is : ", best_auroc_epoch, best_auroc)
-        print("The best results are: net1_auroc(%):{:.3f}; net1_acc(%):{:.3f}; net2_auroc(%):{:.3f}; net2_acc(%):{:.3f}".format(best_auroc_auroc1, best_auroc_acc1, best_auroc_auroc2, best_auroc_acc2))
-
     # if epoch % options['checkpt_freq'] == 0 or epoch == options['max_epoch'] - 1:
     #     save_networks(net, model_path, file_name.split('.')[0] + '_{}'.format(epoch) + 'net1', options['loss'])
-
-        if auroc2 > best_auroc:
-            best_auroc = auroc2
-            best_auroc_epoch = epoch
-            best_auroc_auroc1 = auroc1
-            best_auroc_acc1 = acc1
-            best_auroc_auroc2 = auroc2
-            best_auroc_acc2 = acc2
-
-            save_networks(net, model_path, file_name.split('.')[0] + '_{}'.format(epoch) + 'net1', options['loss'])
-
 
 elapsed = round(time.time() - start_time)
 elapsed = str(datetime.timedelta(seconds=elapsed))
