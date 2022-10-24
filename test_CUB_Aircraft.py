@@ -428,8 +428,8 @@ for difficulty in ('Easy', 'Medium', 'Hard'):
 
     net = STAN_OSFGR(F, num_classes=len(args.train_classes))
 
-    net.load_state_dict('CUB_STAN-OSFGR.pth') ####### load the weights of STAN-OSFGR for the CUB datasets ###########
-    # net.load_state_dict('aircraft_STAN-OSFGR.pth') ####### load the weights of STAN-OSFGR for the CUB datasets ###########
+    net.load_state_dict(torch.load('CUB_STAN-OSFGR.pth')) ####### load the weights of STAN-OSFGR for the CUB datasets ###########
+    # net.load_state_dict(torch.laod('aircraft_STAN-OSFGR.pth')) ####### load the weights of STAN-OSFGR for the CUB datasets ###########
     net = net.to(device)
     net.eval()
 
