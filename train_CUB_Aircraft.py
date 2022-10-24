@@ -721,8 +721,8 @@ for epoch in range(options['max_epoch']):
 
         print("net2 Acc (%): {:.3f}\t AUROC (%): {:.3f}\t OSCR (%): {:.3f}\t".format(results['ACC'], results['AUROC'], results['OSCR']))
 
-    # if epoch % options['checkpt_freq'] == 0 or epoch == options['max_epoch'] - 1:
-    #     save_networks(net, model_path, file_name.split('.')[0] + '_{}'.format(epoch) + 'net1', options['loss'])
+    if epoch % options['checkpt_freq'] == 0 or epoch == options['max_epoch'] - 1:
+        save_networks(net, model_path, file_name.split('.')[0] + '_{}'.format(epoch) + 'net1', options['loss'])
     #     # save_networks(net_LSTM, model_path, file_name.split('.')[0] + '_{}'.format(epoch) + 'net2', options['loss'])
 
 elapsed = round(time.time() - start_time)
