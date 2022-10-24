@@ -15,8 +15,4 @@ run the test_Stanford_Cars.py
 
 
 
-[1] @InProceedings{vaze2022openset,
-               title={Open-Set Recognition: a Good Closed-Set Classifier is All You Need?},
-               author={Sagar Vaze and Kai Han and Andrea Vedaldi and Andrew Zisserman},
-               booktitle={International Conference on Learning Representations},
-               year={2022}}
+[1] Vaze S, Han K, Vedaldi A, et al. Open-set recognition: A good closed-set classifier is all you need[C]. ICLR, 2022.
