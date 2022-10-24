@@ -884,8 +884,8 @@ for epoch in range(options['max_epoch']):
         auroc2 = myauroc(xK_net2, xU_net2)
         print("net2 Acc (%): {:.3f}\t AUROC (%): {:.3f}\t".format(acc2, auroc2))
 
-    # if epoch % options['checkpt_freq'] == 0 or epoch == options['max_epoch'] - 1:
-    #     save_networks(net, model_path, file_name.split('.')[0] + '_{}'.format(epoch) + 'net1', options['loss'])
+        if epoch % options['checkpt_freq'] == 0 or epoch == options['max_epoch'] - 1:
+            save_networks(net, model_path, file_name.split('.')[0] + '_{}'.format(epoch) + 'net1', options['loss'])
 
 elapsed = round(time.time() - start_time)
 elapsed = str(datetime.timedelta(seconds=elapsed))
