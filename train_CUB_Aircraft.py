@@ -176,9 +176,9 @@ def get_optimizer(args, params_list):
     return optimizer
 
 # ###################################### self-defined model ######################################
-class mytry5_20220531_v9_4(nn.Module):  # for swin-B
+class STAN_OSFGR(nn.Module):  # for swin-B
     def __init__(self, transformer, num_classes=1000):
-        super(mytry5_20220531_v9_4, self).__init__()
+        super(STAN_OSFGR, self).__init__()
         self.swinB = transformer
         self.avgpool1 = nn.AdaptiveAvgPool2d((1, 1))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
         self.avgpool14 = nn.AdaptiveAvgPool2d((14, 14))  # 将每张特征图大小->(1,1)，则经过池化后的输出维度=通道数
@@ -501,43 +501,35 @@ F = SwinTransformer(img_size=448, patch_size=4, in_chans=3, num_classes=1000,
                     # use_checkpoint=True
                     )  # the feature dim is 1024
 
-# pretrained_dict = torch.load('swin_base_patch4_window7_224_22k.pth')['model']
+pretrained_dict = torch.load('swin_base_patch4_window7_224_22k.pth')['model']
 
 # net_pre = mytry5_20220516_v2(F, num_classes=len(args.train_classes))
 # net_dict = net.state_dict()
 # net = mytry5_20220519_v1(F, num_classes=len(args.train_classes))
 # net = mytry5_20220519_v2(F, num_classes=len(args.train_classes))
-net = mytry5_20220531_v9_4(F, num_classes=len(args.train_classes))
+net = STAN_OSFGR(F, num_classes=len(args.train_classes))
 
 # print(net_dict.keys())
 # print(pretrained_dict.keys())
 
-# pretrained_dict = {('swinB.'+k): v for k, v in pretrained_dict.items() if (('swinB.'+k) in net_dict) and ('classifier' not in k) and (k not in ['layers.0.blocks.1.attn_mask',
-#                                                                                                 'layers.1.blocks.1.attn_mask',
-#                                                                                                 'layers.2.blocks.1.attn_mask',
-#                                                                                                 'layers.2.blocks.3.attn_mask',
-#                                                                                                 'layers.2.blocks.5.attn_mask',
-#                                                                                                 'layers.2.blocks.7.attn_mask',
-#                                                                                                 'layers.2.blocks.9.attn_mask',
-#                                                                                                 'layers.2.blocks.11.attn_mask',
-#                                                                                                 'layers.2.blocks.13.attn_mask',
-#                                                                                                 'layers.2.blocks.15.attn_mask',
-#                                                                                                 'layers.2.blocks.17.attn_mask'])}
-# net_dict.update(pretrained_dict)
-# net.load_state_dict(net_dict)
-
-# net_pre.load_state_dict(torch.load('open_set_recognition/log/(18.05.2022_|_14.293)/arpl_models/cub/checkpoints/cub_80net1_Softmax.pth'))  # mytry5_20220516_swinB_v2
-# net.load_state_dict(torch.load('open_set_recognition/log/(18.05.2022_|_14.293)/arpl_models/cub/checkpoints/cub_80net1_Softmax.pth'))
-
-# pretrained_dict = torch.load('open_set_recognition/log/(18.05.2022_|_14.293)/arpl_models/cub/checkpoints/cub_80net1_Softmax.pth')
-# pretrained_dict = torch.load('open_set_recognition/log/(13.05.2022_|_41.687)/arpl_models/cub/checkpoints/cub_180net1_Softmax.pth')   # for cub
-# pretrained_dict = torch.load('open_set_recognition/log/(31.05.2022_|_25.861)/arpl_models/aircraft/checkpoints/aircraft_40net1_Softmax.pth')   # for aircraft
-# pretrained_dict = torch.load('open_set_recognition/log/(24.05.2022_|_25.878)/arpl_models/cub/checkpoints/cub_360net1_Softmax.pth')   # for cub
-pretrained_dict = torch.load('open_set_recognition/log/(31.05.2022_|_16.736)/arpl_models/aircraft/checkpoints/aircraft_120net1_Softmax.pth')   # for aircraft
-net_dict = net.state_dict()
-pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in net_dict}
+pretrained_dict = {('swinB.'+k): v for k, v in pretrained_dict.items() if (('swinB.'+k) in net_dict) and ('classifier' not in k) and (k not in ['layers.0.blocks.1.attn_mask',
+                                                                                                'layers.1.blocks.1.attn_mask',
+                                                                                                'layers.2.blocks.1.attn_mask',
+                                                                                                'layers.2.blocks.3.attn_mask',
+                                                                                                'layers.2.blocks.5.attn_mask',
+                                                                                                'layers.2.blocks.7.attn_mask',
+                                                                                                'layers.2.blocks.9.attn_mask',
+                                                                                                'layers.2.blocks.11.attn_mask',
+                                                                                                'layers.2.blocks.13.attn_mask',
+                                                                                                'layers.2.blocks.15.attn_mask',
+                                                                                                'layers.2.blocks.17.attn_mask'])}
 net_dict.update(pretrained_dict)
 net.load_state_dict(net_dict)
+
+# net_dict = net.state_dict()
+# pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in net_dict}
+# net_dict.update(pretrained_dict)
+# net.load_state_dict(net_dict)
 
 feat_dim = args.feat_dim
 
@@ -728,18 +720,6 @@ for epoch in range(options['max_epoch']):
         auroc2 = results['AUROC']
 
         print("net2 Acc (%): {:.3f}\t AUROC (%): {:.3f}\t OSCR (%): {:.3f}\t".format(results['ACC'], results['AUROC'], results['OSCR']))
-
-        if results['AUROC'] > best_auroc:
-            best_auroc = results['AUROC']
-            best_auroc_epoch = epoch
-            best_auroc_acc1 = acc1
-            best_auroc_acc2 = acc2
-            best_auroc_auroc1 = auroc1
-            best_auroc_auroc2 = auroc2
-
-            save_networks(net, model_path, file_name.split('.')[0] + '_{}'.format(epoch) + 'net1', options['loss'])
-
-        print('best epoch; best net1 auroc; best net1 acc; best net2 auroc; best net2 acc', best_auroc_epoch, best_auroc_auroc1, best_auroc_acc1, best_auroc_auroc2, best_auroc_acc2)
 
     # if epoch % options['checkpt_freq'] == 0 or epoch == options['max_epoch'] - 1:
     #     save_networks(net, model_path, file_name.split('.')[0] + '_{}'.format(epoch) + 'net1', options['loss'])
