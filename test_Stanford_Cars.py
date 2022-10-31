@@ -3,7 +3,7 @@ import os
 import argparse
 import datetime
 import time
-import importlib
+# import importlib
 
 import torch
 from torch.utils.data import DataLoader, Dataset
@@ -11,9 +11,9 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 
 import timm
-from tqdm import tqdm
+# from tqdm import tqdm
 import numpy as np
-# import evaluation
+import evaluation
 import sklearn
 import sklearn.metrics
 # import metrics
@@ -26,7 +26,7 @@ import inspect
 from datetime import datetime
 
 from swin_transformer import SwinTransformer   # the more complex file
-from methods.ARPL.core import evaluation
+# from methods.ARPL.core import evaluation
 
 # import datasets_unified.utils_version3 as dataHelper
 # from utils_MoEP_AE_ResNet18_CEloss import progress_bar
@@ -207,6 +207,7 @@ def get_optimizer(args, params_list):
 
 # ###################################### self-defined model ######################################
 
+
 class STAN_OSFGR(nn.Module):  # for swin-B
     def __init__(self, transformer, num_classes=1000):
         super(STAN_OSFGR, self).__init__()
@@ -356,8 +357,6 @@ class STAN_OSFGR(nn.Module):  # for swin-B
         Hidden = self.MLP1(F1)
         Cell = self.MLP2(F1)
 
-        # print('F1_feature_maps.shape is: ', F1_feature_maps.shape)
-
         F1_splits = F1_feature_maps.view(F1_feature_maps.shape[0], 1024, 49)   # (b, 1024, 196)
         F2_splits = F2_feature_maps.view(F2_feature_maps.shape[0], 1024, 49)   # (b, 1024, 196)
         F3_splits = F3_feature_maps.view(F3_feature_maps.shape[0], 1024, 49)   # (b, 1024, 196)
@@ -444,7 +443,8 @@ for i in range(1):
 
     class trainset(Dataset):
         def __init__(self, loader=trainimg_loader):
-            self.file_path = './new_FG_datasets/stanford_cars/mat2txt.txt'
+            self.file_path = '../new_FG_datasets/stanford_cars/mat2txt.txt'
+            # self.file_path = './stanford_cars/mat2txt.txt'
             all_train_val_img_path_list = []
             all_train_val_label_list = []
             all_test_known_img_path_list = []
@@ -454,7 +454,8 @@ for i in range(1):
             with open(self.file_path, 'rb') as f:
                 for line in f.readlines():
                     each_line = line.decode().rstrip().split(' ')
-                    img_path = './new_FG_datasets/stanford_cars/' + each_line[1]
+                    img_path = '../new_FG_datasets/stanford_cars/' + each_line[1]
+                    # img_path = './stanford_cars/' + each_line[1]
                     label = int(each_line[2]) - 1  # from 1 -> from 0
                     if_test = int(each_line[3])
                     if label < 98:   # known classes
@@ -591,6 +592,7 @@ F = SwinTransformer(img_size=224, patch_size=4, in_chans=3, num_classes=1000,
 
 # net = mytry5_20220519_v3_backbone(F, num_classes=98)
 # net = mytry5_20220531_v9_4(F, num_classes=98)
+# net = mytry5_20220901_try7_v1_p4(F, num_classes=98)
 net = STAN_OSFGR(F, num_classes=98)
 
 # net_dict = net.state_dict()
@@ -608,9 +610,12 @@ net = STAN_OSFGR(F, num_classes=98)
 #                                                                                                 'layers.2.blocks.17.attn_mask'])}
 # net_dict.update(pretrained_dict)
 # net.load_state_dict(net_dict)
+# net_dict = net.state_dict()
+# pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in net_dict}
+# net_dict.update(pretrained_dict)
+# net.load_state_dict(net_dict)
 
-net.load_state_dict(torch.load('Stanford-Cars_STAN-OSFGR.pth'))   # backbone
-
+net.load_state_dict(torch.load('stanford_cars_CFVAN_OSFGR.pth'))
 
 # -----------------------------
 # PREPARE EXPERIMENT
@@ -642,7 +647,8 @@ xK_net2 = []
 yK_net2 = []
 xU_net2 = []
 
-for batch_idx, (data, labels) in enumerate(tqdm(knownloader)):
+# for batch_idx, (data, labels) in enumerate(tqdm(knownloader)):
+for batch_idx, (data, labels) in enumerate(knownloader):
 
     if data.shape[1] == 3:
         pass
@@ -655,6 +661,9 @@ for batch_idx, (data, labels) in enumerate(tqdm(knownloader)):
     with torch.no_grad():
 
         outputs_ori, outputs_LSTM = net(data)
+        # outputs_ori = net(data)
+
+        # outputs_LSTM = outputs_ori
 
         predictions = outputs_ori.data.max(1)[1]
         total += labels.size(0)
@@ -674,7 +683,8 @@ yK_net1 = np.asarray(yK_net1)
 xK_net2 = np.asarray(xK_net2)
 yK_net2 = np.asarray(yK_net2)
 
-for batch_idx, (data, labels) in enumerate(tqdm(unknownloader)):
+# for batch_idx, (data, labels) in enumerate(tqdm(unknownloader)):
+for batch_idx, (data, labels) in enumerate(unknownloader):
 
     if data.shape[1] == 3:
         pass
@@ -685,6 +695,9 @@ for batch_idx, (data, labels) in enumerate(tqdm(unknownloader)):
 
     with torch.no_grad():
         outputs_ori, outputs_LSTM = net(data)
+        # outputs_ori = net(data)
+
+        # outputs_LSTM = outputs_ori
 
         xU_net1 += outputs_ori.detach().cpu().tolist()
         xU_net2 += outputs_LSTM.detach().cpu().tolist()
