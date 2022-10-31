@@ -11,30 +11,22 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 
-from methods.ARPL.arpl_models import gan
-from methods.ARPL.arpl_models.arpl_models import classifier32ABN
-from methods.ARPL.arpl_models.wrapper_classes import TimmResNetWrapper
-from methods.ARPL.arpl_utils import save_networks
-from methods.ARPL.core import train, train_cs, test
-
-from utils.utils import init_experiment, seed_torch, str2bool
-from utils.schedulers import get_scheduler
 from data.open_set_datasets import get_class_splits, get_datasets
-from models.model_utils import get_model
 
 from config import exp_root
 
 import timm
-from methods.ARPL.arpl_utils import AverageMeter
-from tqdm import tqdm
+# from methods.ARPL.arpl_utils import AverageMeter
+# from tqdm import tqdm
 import numpy as np
-from methods.ARPL.core import evaluation
+# from methods.ARPL.core import evaluation
+import evaluation
 import sklearn
 import sklearn.metrics
 from sklearn.metrics import average_precision_score
 
 import pickle
-from test.utils import closed_set_acc, acc_at_95_tpr, compute_auroc, compute_aupr, compute_oscr
+# from test.utils import closed_set_acc, acc_at_95_tpr, compute_auroc, compute_aupr, compute_oscr
 from sklearn.metrics import roc_curve, roc_auc_score, accuracy_score, average_precision_score
 
 import scipy.io as sio
@@ -43,7 +35,7 @@ import math
 # swin transformer as the backbone
 from swin_transformer import SwinTransformer   # the more complex file
 
-from openSetClassifier_MoEP_AE_for_fine_grained import openSetClassifier
+# from openSetClassifier_MoEP_AE_for_fine_grained import openSetClassifier
 
 
 parser = argparse.ArgumentParser("Training")
@@ -97,8 +89,8 @@ parser.add_argument('--rand_aug_n', type=int, default=2)
 # misc
 # parser.add_argument('--num_workers', default=4, type=int)
 parser.add_argument('--num_workers', default=2, type=int)
-parser.add_argument('--split_train_val', default=False, type=str2bool,
-                        help='Subsample training set to create validation set', metavar='BOOL')
+# parser.add_argument('--split_train_val', default=False, type=str2bool,
+#                         help='Subsample training set to create validation set', metavar='BOOL')
 parser.add_argument('--device', default='cuda:0', type=str, help='Which GPU to use')
 parser.add_argument('--gpus', default=[0], type=int, nargs='+',
                         help='device ids assignment (e.g 0 1 2 3)')
@@ -112,11 +104,11 @@ parser.add_argument('--seed', type=int, default=1)
 parser.add_argument('--use-cpu', action='store_true')
 parser.add_argument('--eval', action='store_true', help="Eval", default=False)
 parser.add_argument('--cs', action='store_true', help="Confusing Sample", default=False)
-parser.add_argument('--train_feat_extractor', default=True, type=str2bool,
-                        help='Train feature extractor (only implemented for renset_50_faces)', metavar='BOOL')
+# parser.add_argument('--train_feat_extractor', default=True, type=str2bool,
+#                         help='Train feature extractor (only implemented for renset_50_faces)', metavar='BOOL')
 parser.add_argument('--split_idx', default=0, type=int, help='0-4 OSR splits for each dataset')
-parser.add_argument('--use_softmax_in_eval', default=False, type=str2bool,
-                        help='Do we use softmax or logits for evaluation', metavar='BOOL')
+# parser.add_argument('--use_softmax_in_eval', default=False, type=str2bool,
+#                         help='Do we use softmax or logits for evaluation', metavar='BOOL')
 
 parser.add_argument('--osr_mode', default='max_softmax', type=str, help='{entropy, max_softmax}')
 
@@ -124,8 +116,6 @@ parser.add_argument('--osr_mode', default='max_softmax', type=str, help='{entrop
 
 
 # ###################################### self-defined model ######################################
-mask_threshold = 0.5
-
 
 class STAN_OSFGR(nn.Module):  # for swin-B
     def __init__(self, transformer, num_classes=1000):
@@ -310,7 +300,6 @@ class STAN_OSFGR(nn.Module):  # for swin-B
         return output, Hidden, Cell
 
 
-
 # ################################################################################################
 # ############################################ main ##############################################
 # ################################################################################################
@@ -338,18 +327,6 @@ train_classes = class_info['known_classes']
 open_set_classes = class_info['unknown_classes']
 
 
-def my_cross_entropy_loss(input, target):
-    # input.shape: torch.size([-1, class])
-    # target.shape: torch.size([-1])
-    exp = torch.exp(input)
-    tmp1 = exp.gather(1, target.unsqueeze(-1)).squeeze()
-    tmp2 = exp.sum(1)
-    softmax = tmp1 / tmp2
-    log = -torch.log(softmax)
-
-    return log
-
-
 for difficulty in ('Easy', 'Medium', 'Hard'):
 
     # ------------------------
@@ -362,9 +339,6 @@ for difficulty in ('Easy', 'Medium', 'Hard'):
                             image_size=args.image_size, balance_open_set_eval=False,
                             split_train_val=False, open_set_classes=args.open_set_classes)
 
-    # for i in range(0, len(datasets['train']), 10):
-        # print(i, list(datasets['train'].data.filepath)[i])
-
     # ------------------------
     # DATALOADERS
     # ------------------------
@@ -374,42 +348,6 @@ for difficulty in ('Easy', 'Medium', 'Hard'):
         # shuffle = True if k == 'train' else False
         dataloaders[k] = DataLoader(v, batch_size=args.batch_size,
                                     shuffle=shuffle, sampler=None, num_workers=args.num_workers)
-
-    # #######################################################################################
-    # ############### for saving training data as .npy format ################################
-    # #######################################################################################
-    # all_data_train = []
-    # all_data_train_labels = []
-    # for data, labels, idx in tqdm(dataloaders['train']):
-    #     all_data_train += data.tolist()
-    #     all_data_train_labels += labels.tolist()
-    # all_data_train = np.asarray(all_data_train)
-    # all_data_train_labels = np.asarray(all_data_train_labels)
-    # np.save('all_data_train_cub.npy', all_data_train)
-    # np.save('all_data_train_labels_cub.npy', all_data_train_labels)
-    #
-    # import sys
-    # sys.exit(0)
-    ######################## for saving test-known npy data #################################
-    # all_data_test_known = []
-    # all_data_test_known_labels = []
-    # for data, labels, idx in tqdm(dataloaders['test_known']):
-    #     all_data_test_known += data.tolist()
-    #     all_data_test_known_labels += labels.tolist()
-    #     with torch.no_grad():
-    #         outputs = net(data)
-    #         predictions = outputs_ori.data.max(1)[1]
-    #
-    # all_data_test_known = np.asarray(all_data_test_known)
-    # all_data_test_known_labels = np.asarray(all_data_test_known_labels)
-    # np.save('all_data_test_known_cub.npy', all_data_test_known)
-    # np.save('all_data_test_known_labels_cub.npy', all_data_test_known_labels)
-    #
-    # import sys
-    # sys.exit(0)
-    # #######################################################################################
-    # #######################################################################################
-    # #######################################################################################
 
     # ------------------------
     # MODEL
@@ -428,8 +366,11 @@ for difficulty in ('Easy', 'Medium', 'Hard'):
 
     net = STAN_OSFGR(F, num_classes=len(args.train_classes))
 
-    net.load_state_dict(torch.load('CUB_STAN-OSFGR.pth')) ####### load the weights of STAN-OSFGR for the CUB datasets ###########
-    # net.load_state_dict(torch.laod('aircraft_STAN-OSFGR.pth')) ####### load the weights of STAN-OSFGR for the CUB datasets ###########
+    if args.dataset == 'cub':
+        net.load_state_dict(torch.load('CUB_STAN-OSFGR.pth'))  # cub
+    elif args.dataset == 'aircraft':
+        net.load_state_dict(torch.load('Aircraft_STAN-OSFGR.pth'))   # aircraft
+
     net = net.to(device)
     net.eval()
 
@@ -442,19 +383,9 @@ for difficulty in ('Easy', 'Medium', 'Hard'):
     _pred_k_acc, _pred_k, _pred_u, _labels = [], [], [], []
     _pred_k_acc2, _pred_k2, _pred_u2 = [], [], []
 
-    # with torch.no_grad():
-    # if difficulty == 'Hard':
-    #     all_data_test_known = []
-
-    # if difficulty == 'Easy':
-    #     all_test_known_logits1 = []
-    #     all_test_known_logits2 = []
-    #     all_test_known_logits3 = []
-    #     all_test_known_logits4 = []
-    #     all_test_known_logits5 = []
-
     batch_num = 0
-    for data, labels, idx in tqdm(dataloaders['test_known']):
+    # for data, labels, idx in tqdm(dataloaders['test_known']):
+    for batch_idx, (data, labels, idx) in enumerate(dataloaders['test_known']):
         data, labels = data.cuda(), labels.cuda()
 
         # if difficulty == 'Hard':
@@ -475,14 +406,6 @@ for difficulty in ('Easy', 'Medium', 'Hard'):
             # outputs_ori = high_output
             # outputs_LSTM = (low_output + high_output) / 2
 
-            # if difficulty == 'Easy':  #, 'Medium', 'Hard'):
-            #
-            #     all_test_known_logits1 += logits1.cpu().detach().tolist()
-            #     all_test_known_logits2 += logits2.cpu().detach().tolist()
-            #     all_test_known_logits3 += logits3.cpu().detach().tolist()
-            #     all_test_known_logits4 += logits4.cpu().detach().tolist()
-            #     all_test_known_logits5 += logits5.cpu().detach().tolist()
-
         batch_num += 1
 
         predictions = outputs_ori.data.max(1)[1]
@@ -498,50 +421,10 @@ for difficulty in ('Easy', 'Medium', 'Hard'):
         _pred_k2.append(outputs_LSTM.data.cpu().numpy())
         _labels.append(labels.data.cpu().numpy())
 
-    # if difficulty == 'Hard':
-    #     all_data_test_known = np.asarray(all_data_test_known)
 
-    # if difficulty == 'Easy':
-    #     all_test_known_logits1 = np.asarray(all_test_known_logits1)
-    #     all_test_known_logits2 = np.asarray(all_test_known_logits2)
-    #     all_test_known_logits3 = np.asarray(all_test_known_logits3)
-    #     all_test_known_logits4 = np.asarray(all_test_known_logits4)
-    #     all_test_known_logits5 = np.asarray(all_test_known_logits5)
-    #
-    #     sio.savemat('all_test_known_logits1.mat', {'all_test_known_logits1': all_test_known_logits1})
-    #     sio.savemat('all_test_known_logits2.mat', {'all_test_known_logits2': all_test_known_logits2})
-    #     sio.savemat('all_test_known_logits3.mat', {'all_test_known_logits3': all_test_known_logits3})
-    #     sio.savemat('all_test_known_logits4.mat', {'all_test_known_logits4': all_test_known_logits4})
-    #     sio.savemat('all_test_known_logits5.mat', {'all_test_known_logits5': all_test_known_logits5})
-
-    # if difficulty == 'Hard':
-    #     all_data_test_unknown = []
-
-    # if difficulty == 'Easy':
-    #     all_test_unknown_logits1_easy = []
-    #     all_test_unknown_logits2_easy = []
-    #     all_test_unknown_logits3_easy = []
-    #     all_test_unknown_logits4_easy = []
-    #     all_test_unknown_logits5_easy = []
-    # elif difficulty == 'Medium':
-    #     all_test_unknown_logits1_medium = []
-    #     all_test_unknown_logits2_medium = []
-    #     all_test_unknown_logits3_medium = []
-    #     all_test_unknown_logits4_medium = []
-    #     all_test_unknown_logits5_medium = []
-    # elif difficulty == 'Hard':
-    #     all_test_unknown_logits1_hard = []
-    #     all_test_unknown_logits2_hard = []
-    #     all_test_unknown_logits3_hard = []
-    #     all_test_unknown_logits4_hard = []
-    #     all_test_unknown_logits5_hard = []
-
-    for batch_idx, (data, labels, idx) in enumerate(tqdm(dataloaders['test_unknown'])):
+    # for batch_idx, (data, labels, idx) in enumerate(tqdm(dataloaders['test_unknown'])):
+    for batch_idx, (data, labels, idx) in enumerate(dataloaders['test_unknown']):
         data, labels = data.cuda(), labels.cuda()
-
-        # print(labels)
-        # if difficulty == 'Hard':
-        #     all_data_test_unknown += data.detach().cpu().tolist()
 
         with torch.no_grad():
             # outputs = net(data)
@@ -558,49 +441,8 @@ for difficulty in ('Easy', 'Medium', 'Hard'):
             # outputs_ori = high_output
             # outputs_LSTM = (low_output + high_output) / 2
 
-            # if difficulty == 'Easy':
-            #     all_test_unknown_logits1_easy += logits1.cpu().detach().tolist()
-            #     all_test_unknown_logits2_easy += logits2.cpu().detach().tolist()
-            #     all_test_unknown_logits3_easy += logits3.cpu().detach().tolist()
-            #     all_test_unknown_logits4_easy += logits4.cpu().detach().tolist()
-            #     all_test_unknown_logits5_easy += logits5.cpu().detach().tolist()
-            # elif difficulty == 'Medium':
-            #     all_test_unknown_logits1_medium += logits1.cpu().detach().tolist()
-            #     all_test_unknown_logits2_medium += logits2.cpu().detach().tolist()
-            #     all_test_unknown_logits3_medium += logits3.cpu().detach().tolist()
-            #     all_test_unknown_logits4_medium += logits4.cpu().detach().tolist()
-            #     all_test_unknown_logits5_medium += logits5.cpu().detach().tolist()
-            # elif difficulty == 'Hard':
-            #     all_test_unknown_logits1_hard += logits1.cpu().detach().tolist()
-            #     all_test_unknown_logits2_hard += logits2.cpu().detach().tolist()
-            #     all_test_unknown_logits3_hard += logits3.cpu().detach().tolist()
-            #     all_test_unknown_logits4_hard += logits4.cpu().detach().tolist()
-            #     all_test_unknown_logits5_hard += logits5.cpu().detach().tolist()
-
         _pred_u.append(outputs_ori.data.cpu().numpy())
         _pred_u2.append(outputs_LSTM.data.cpu().numpy())
-
-    # if difficulty == 'Hard':
-    #     all_data_test_unknown = np.asarray(all_data_test_unknown)
-
-    # if difficulty == 'Easy':
-    #     all_test_unknown_logits1_easy = np.asarray(all_test_unknown_logits1_easy)
-    #     all_test_unknown_logits2_easy = np.asarray(all_test_unknown_logits2_easy)
-    #     all_test_unknown_logits3_easy = np.asarray(all_test_unknown_logits3_easy)
-    #     all_test_unknown_logits4_easy = np.asarray(all_test_unknown_logits4_easy)
-    #     all_test_unknown_logits5_easy = np.asarray(all_test_unknown_logits5_easy)
-    # elif difficulty == 'Medium':
-    #     all_test_unknown_logits1_medium = np.asarray(all_test_unknown_logits1_medium)
-    #     all_test_unknown_logits2_medium = np.asarray(all_test_unknown_logits2_medium)
-    #     all_test_unknown_logits3_medium = np.asarray(all_test_unknown_logits3_medium)
-    #     all_test_unknown_logits4_medium = np.asarray(all_test_unknown_logits4_medium)
-    #     all_test_unknown_logits5_medium = np.asarray(all_test_unknown_logits5_medium)
-    # elif difficulty == 'Hard':
-    #     all_test_unknown_logits1_hard = np.asarray(all_test_unknown_logits1_hard)
-    #     all_test_unknown_logits2_hard = np.asarray(all_test_unknown_logits2_hard)
-    #     all_test_unknown_logits3_hard = np.asarray(all_test_unknown_logits3_hard)
-    #     all_test_unknown_logits4_hard = np.asarray(all_test_unknown_logits4_hard)
-    #     all_test_unknown_logits5_hard = np.asarray(all_test_unknown_logits5_hard)
 
     # Accuracy
     acc = float(correct) * 100. / float(total)
@@ -646,29 +488,4 @@ for difficulty in ('Easy', 'Medium', 'Hard'):
     # results['AUPR'] = ap_score * 100
 
     print("net2 Acc (%): {:.3f}\t AUROC (%): {:.3f}\t OSCR (%): {:.3f}\t".format(results['ACC'], results['AUROC'], results['OSCR']))
-
-    # if difficulty == 'Hard':
-    #     np.save('all_data_test_known_hard_aircraft.npy', all_data_test_known)
-    #     np.save('all_data_test_unknown_hard_aircraft.npy', all_data_test_unknown)
-    # np.save('all_data_test_known_mytry5_20220512_swinB_v3_1.npy', all_data_test_known)
-    # np.save('all_data_test_unknown_mytry5_20220512_swinB_v3_1.npy', all_data_test_unknown)
-
-    # if difficulty == 'Easy':
-    #     sio.savemat('all_test_unknown_logits1_easy.mat', {'all_test_unknown_logits1_easy': all_test_unknown_logits1_easy})
-    #     sio.savemat('all_test_unknown_logits2_easy.mat', {'all_test_unknown_logits2_easy': all_test_unknown_logits2_easy})
-    #     sio.savemat('all_test_unknown_logits3_easy.mat', {'all_test_unknown_logits3_easy': all_test_unknown_logits3_easy})
-    #     sio.savemat('all_test_unknown_logits4_easy.mat', {'all_test_unknown_logits4_easy': all_test_unknown_logits4_easy})
-    #     sio.savemat('all_test_unknown_logits5_easy.mat', {'all_test_unknown_logits5_easy': all_test_unknown_logits5_easy})
-    # elif difficulty == 'Medium':
-    #     sio.savemat('all_test_unknown_logits1_medium.mat', {'all_test_unknown_logits1_medium': all_test_unknown_logits1_medium})
-    #     sio.savemat('all_test_unknown_logits2_medium.mat', {'all_test_unknown_logits2_medium': all_test_unknown_logits2_medium})
-    #     sio.savemat('all_test_unknown_logits3_medium.mat', {'all_test_unknown_logits3_medium': all_test_unknown_logits3_medium})
-    #     sio.savemat('all_test_unknown_logits4_medium.mat', {'all_test_unknown_logits4_medium': all_test_unknown_logits4_medium})
-    #     sio.savemat('all_test_unknown_logits5_medium.mat', {'all_test_unknown_logits5_medium': all_test_unknown_logits5_medium})
-    # elif difficulty == 'Hard':
-    #     sio.savemat('all_test_unknown_logits1_hard.mat', {'all_test_unknown_logits1_hard': all_test_unknown_logits1_hard})
-    #     sio.savemat('all_test_unknown_logits2_hard.mat', {'all_test_unknown_logits2_hard': all_test_unknown_logits2_hard})
-    #     sio.savemat('all_test_unknown_logits3_hard.mat', {'all_test_unknown_logits3_hard': all_test_unknown_logits3_hard})
-    #     sio.savemat('all_test_unknown_logits4_hard.mat', {'all_test_unknown_logits4_hard': all_test_unknown_logits4_hard})
-    #     sio.savemat('all_test_unknown_logits5_hard.mat', {'all_test_unknown_logits5_hard': all_test_unknown_logits5_hard})
 
