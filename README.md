@@ -1,5 +1,5 @@
 # STAN-OSFGR-code
-This is the code for our paper: "Spatial-Temporal Attention Network for Open-Set Fine-Grained Image Recognition", which is under preview of a journal. The authors of this paper are Jiayin Sun, Hong Wang, and Qiulei Dong. The code is based on `https://github.com/sgvaze/osr_closed_set_all_you_need` [1]  
+This is the code for our paper: "Spatial-Temporal Attention Network for Open-Set Fine-Grained Image Recognition", which is under review of a journal. The authors of this paper are Jiayin Sun, Hong Wang, and Qiulei Dong. The code is based on `https://github.com/sgvaze/osr_closed_set_all_you_need` [1]  
 
 ## Environments
 The code is configured by PyTorch 1.7.1, torchvision 0.8.2, Python 3.7.7.
