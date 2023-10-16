@@ -62,4 +62,5 @@ python test_Stanford_Cars.py
 ```
 
 [1] Jiayin Sun, Hong Wang, Qiulei Dong. Hierarchical Attention Network for Open-Set Fine-Grained Image Recognition[J]. IEEE Transactions on Circuits and Systems for Video Technology, DOI: 10.1109/TCSVT.2023.3325001, 2023.
+
 [2] Vaze S, Han K, Vedaldi A, et al. Open-set recognition: A good closed-set classifier is all you need[C]. ICLR, 2022.
