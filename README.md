@@ -1,5 +1,5 @@
 # STAN-OSFGR-code
-This is the code for our paper: "Spatial-Temporal Attention Network for Open-Set Fine-Grained Image Recognition", which is under review of a journal. The authors of this paper are Jiayin Sun, Hong Wang, and Qiulei Dong. The code is based on `https://github.com/sgvaze/osr_closed_set_all_you_need` [1]  
+This is the code for our paper: "Hierarchical Attention Network for Open-Set Fine-Grained Image Recognition"[1], which has been accepted by T-CSVT. The code is based on `https://github.com/sgvaze/osr_closed_set_all_you_need` [2]  
 
 ## Environments
 The code is configured by PyTorch 1.7.1, torchvision 0.8.2, Python 3.7.7.
@@ -61,5 +61,5 @@ To test the trained weights on the Stanford-Cars datasets, run:
 python test_Stanford_Cars.py
 ```
 
-
-[1] Vaze S, Han K, Vedaldi A, et al. Open-set recognition: A good closed-set classifier is all you need[C]. ICLR, 2022.
+[1] Jiayin Sun, Hong Wang, Qiulei Dong. Hierarchical Attention Network for Open-Set Fine-Grained Image Recognition[J]. IEEE Transactions on Circuits and Systems for Video Technology, DOI: 10.1109/TCSVT.2023.3325001, 2023.
+[2] Vaze S, Han K, Vedaldi A, et al. Open-set recognition: A good closed-set classifier is all you need[C]. ICLR, 2022.
