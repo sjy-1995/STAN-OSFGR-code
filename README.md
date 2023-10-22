@@ -1,5 +1,6 @@
 # STAN-OSFGR-code
 This is the code for our paper: "Hierarchical Attention Network for Open-Set Fine-Grained Image Recognition"[1], which has been accepted by T-CSVT. The code is based on `https://github.com/sgvaze/osr_closed_set_all_you_need` [2]  
+In addition, the appendix of the paper has been provided in "Appendix.pdf".
 
 ## Environments
 The code is configured by PyTorch 1.7.1, torchvision 0.8.2, Python 3.7.7.
